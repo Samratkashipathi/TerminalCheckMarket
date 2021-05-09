@@ -46,8 +46,8 @@ func main() {
 	indianStockWidget.Title = "Stock Watchlist"
 	indianStockWidget.Rows = []string{
 		"[0] github.com/gizak/termui/v3",
-		"[1] [你好，世界](fg:blue)",
-		"[2] [こんにちは世界](fg:red)",
+		"[1] Something",
+		"[2] New thing",
 		"[3] [color](fg:white,bg:green) output",
 		"[4] output.go",
 		"[5] random_out.go",
@@ -64,8 +64,8 @@ func main() {
 	cryptoWidget.Title = "Crypto Watchlist"
 	cryptoWidget.Rows = []string{
 		"[0] github.com/gizak/termui/v3",
-		"[1] [你好，世界](fg:blue)",
-		"[2] [こんにちは世界](fg:red)",
+		"[1] Something",
+		"[2] New thing",
 		"[3] [color](fg:white,bg:green) output",
 		"[4] output.go",
 		"[5] random_out.go",

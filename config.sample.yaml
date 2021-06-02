@@ -1,0 +1,6 @@
+CRYPTO_STOCK:
+  - BTC
+  - ETH
+  - DOGE
+COIN_API_KEY: ""  # https://www.coinapi.io/
+COIN_API_EXCHANGE_CURRENCY: "INR"

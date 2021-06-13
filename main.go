@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
 	"os"
+
+	"gopkg.in/yaml.v2"
+
+	"encoding/json"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
@@ -19,10 +22,14 @@ type Config struct {
 	CoinApiExchangeCurrency string   `yaml:"COIN_API_EXCHANGE_CURRENCY"`
 }
 
+type SpecificRate struct {
+	Time string
+	Rate float64
+}
+
 func (c *Config) getConfig() *Config {
 
-	//os.Setenv("TERMINAL_CHECK_MARKET_CONFIG_PATH", "D:\\Repos\\GoProjects\\TerminalCheckMarket\\config.yaml")
-	os.Setenv("TERMINAL_CHECK_MARKET_CONFIG_PATH", "/mnt/d/Repos/GoProjects/TerminalCheckMarket/config.yaml")
+	os.Setenv("TERMINAL_CHECK_MARKET_CONFIG_PATH", "config.yaml")
 
 	configFilePath := os.Getenv("TERMINAL_CHECK_MARKET_CONFIG_PATH")
 	if len(configFilePath) == 0 {
@@ -130,7 +137,20 @@ func main() {
 			continue
 		}
 
-		headingWidget.Text = fmt.Sprintln(selectedCrypto, response.Body)
+		defer response.Body.Close()
+
+		bodyBytes, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		bodyString := string(bodyBytes)
+		jsonData := SpecificRate{}
+		err = json.Unmarshal([]byte(bodyString), &jsonData)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		headingWidget.Text = fmt.Sprintln(selectedCrypto, "\n Current Price:", fmt.Sprintf("%f", jsonData.Rate), "\n Time:", jsonData.Time)
 		ui.Render(headingWidget, graphWidget, cryptoWidget, errorWidget)
 	}
 

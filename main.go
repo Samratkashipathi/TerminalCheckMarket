@@ -51,6 +51,45 @@ func (c *Config) getConfig() *Config {
 	return c
 }
 
+func getCurrentPrice(config Config, crypto string) (*SpecificRate, error) {
+	client := &http.Client{}
+
+	url := "https://rest.coinapi.io/v1/exchangerate/" + crypto + "/" + config.CoinApiExchangeCurrency
+	request, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	request.Header.Set("X-CoinAPI-Key", config.CoinApiKey)
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	bodyString := string(bodyBytes)
+	jsonData := SpecificRate{}
+
+	err = json.Unmarshal([]byte(bodyString), &jsonData)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	return &jsonData, nil
+}
+
 func main() {
 
 	var config Config
@@ -105,8 +144,6 @@ func main() {
 
 	uiEvents := ui.PollEvents()
 
-	client := &http.Client{}
-
 	for {
 		e := <-uiEvents
 		switch e.ID {
@@ -119,8 +156,8 @@ func main() {
 		}
 
 		selectedCrypto := cryptoWidget.Rows[cryptoWidget.SelectedRow]
-		url := "https://rest.coinapi.io/v1/exchangerate/" + selectedCrypto + "/" + config.CoinApiExchangeCurrency
-		request, err := http.NewRequest("GET", url, nil)
+
+		currentPrice, err := getCurrentPrice(config, selectedCrypto)
 
 		if err != nil {
 			errorWidget.Text = err.Error()
@@ -128,29 +165,7 @@ func main() {
 			continue
 		}
 
-		request.Header.Set("X-CoinAPI-Key", config.CoinApiKey)
-
-		response, err := client.Do(request)
-		if err != nil {
-			errorWidget.Text = err.Error()
-			ui.Render(headingWidget, graphWidget, cryptoWidget, errorWidget)
-			continue
-		}
-
-		defer response.Body.Close()
-
-		bodyBytes, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		bodyString := string(bodyBytes)
-		jsonData := SpecificRate{}
-		err = json.Unmarshal([]byte(bodyString), &jsonData)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		headingWidget.Text = fmt.Sprintln(selectedCrypto, "\n Current Price:", fmt.Sprintf("%f", jsonData.Rate), "\n Time:", jsonData.Time)
+		headingWidget.Text = fmt.Sprintln(selectedCrypto, "\n Current Price:", fmt.Sprintf("%f", currentPrice.Rate), "\n Time:", currentPrice.Time)
 		ui.Render(headingWidget, graphWidget, cryptoWidget, errorWidget)
 	}
 

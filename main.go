@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v2"
 
@@ -25,6 +26,12 @@ type Config struct {
 type SpecificRate struct {
 	Time string
 	Rate float64
+}
+
+type TimeSeriesData struct {
+	TimePeriodStart string
+	TimePeriodEnd   string
+	RateClose       float64
 }
 
 func (c *Config) getConfig() *Config {
@@ -80,6 +87,47 @@ func getCurrentPrice(config Config, crypto string) (*SpecificRate, error) {
 
 	bodyString := string(bodyBytes)
 	jsonData := SpecificRate{}
+
+	err = json.Unmarshal([]byte(bodyString), &jsonData)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	return &jsonData, nil
+}
+
+func getOneDayData(config Config, crypto string) (*[]TimeSeriesData, error) {
+	client := &http.Client{}
+
+	url := "https://rest.coinapi.io/v1/exchangerate/" + crypto + "/" + config.CoinApiExchangeCurrency +
+		"/history?period_id=1HRS&time_start=" + fmt.Sprintf(time.Now().AddDate(0, 0, -1).Format("2006-01-02T15:04:05")) + "&time_end" + fmt.Sprintf(time.Now().Format("2006-01-02T15:04:05"))
+
+	request, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	request.Header.Set("X-CoinAPI-Key", config.CoinApiKey)
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	bodyString := string(bodyBytes)
+	jsonData := []TimeSeriesData{}
 
 	err = json.Unmarshal([]byte(bodyString), &jsonData)
 	if err != nil {
@@ -164,6 +212,16 @@ func main() {
 			ui.Render(headingWidget, graphWidget, cryptoWidget, errorWidget)
 			continue
 		}
+
+		timeSeriesData, err := getOneDayData(config, selectedCrypto)
+
+		if err != nil {
+			errorWidget.Text = err.Error()
+			ui.Render(headingWidget, graphWidget, cryptoWidget, errorWidget)
+			continue
+		}
+
+		fmt.Println(timeSeriesData)
 
 		headingWidget.Text = fmt.Sprintln(selectedCrypto, "\n Current Price:", fmt.Sprintf("%f", currentPrice.Rate), "\n Time:", currentPrice.Time)
 		ui.Render(headingWidget, graphWidget, cryptoWidget, errorWidget)
